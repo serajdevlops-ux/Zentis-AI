@@ -32,11 +32,15 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sdkmanager --install "platform-tools"
+          sdkmanager --install "platforms;android-35"
+          sdkmanager --install "build-tools;35.0.0"
 
       - name: Validate source files
         shell: bash
@@ -159,7 +163,6 @@ jobs:
           import android.webkit.WebChromeClient;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
-          import android.widget.Toast;
 
           import com.chaquo.python.PyObject;
           import com.chaquo.python.Python;
@@ -182,9 +185,9 @@ jobs:
                   zentraAI = module.callAttr("ZentraAI");
 
                   webView = new WebView(this);
-
                   webView.getSettings().setJavaScriptEnabled(true);
                   webView.getSettings().setDomStorageEnabled(true);
+
                   webView.setWebViewClient(new WebViewClient());
                   webView.setWebChromeClient(new WebChromeClient());
 
@@ -230,7 +233,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build debug APK
-        run: gradle --no-daemon --stacktrace :app:assembleDebug
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace :app:assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
