@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#101114">
+    <title>Zentra AI</title>
+
+    <style>
+        :root {
+            color-scheme: dark;
+            --background: #101114;
+            --panel: #18191e;
+            --border: #292a32;
+            --text: #f4f4f5;
+            --muted: #9698a3;
+            --accent: #9b8cff;
+            --user-message: #292638;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            height: 100dvh;
+            overflow: hidden;
+            background: var(--background);
+            color: var(--text);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont,
+                "Segoe UI", sans-serif;
+        }
+
+        button, textarea {
+            font: inherit;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        .app {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .sidebar {
+            width: 250px;
+            flex-shrink: 0;
+            padding: 20px 14px;
+            background: #15161a;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 5px 8px;
+        }
+
+        .logo {
+            width: 38px;
+            height: 38px;
+            border-radius: 13px;
+            background: linear-gradient(135deg, #b6a8ff, #7964e8);
+            display: grid;
+            place-items: center;
+            color: #151222;
+            font-size: 23px;
+            font-weight: 800;
+        }
+
+        .brand-name {
+            font-size: 18px;
+            font-weight: 750;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-label {
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .new-chat {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--panel);
+            color: var(--text);
+            text-align: left;
+        }
+
+        .new-chat:hover {
+            border-color: var(--accent);
+        }
+
+        .sidebar-label {
+            padding: 0 8px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .history {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            overflow: auto;
+        }
+
+        .history-item {
+            padding: 10px;
+            border-radius: 9px;
+            color: #c9c9d2;
+            font-size: 13px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            background: var(--panel);
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            color: var(--muted);
+            font-size: 12px;
+            padding: 8px;
+        }
+
+        .main {
+            min-width: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            min-height: 65px;
+            padding: 0 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .model-name {
+            font-size: 14px;
+            font-weight: 650;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #e6bd68;
+        }
+
+        .chat {
+            width: 100%;
+            max-width: 850px;
+            flex: 1;
+            align-self: center;
+            overflow-y: auto;
+            padding: 30px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            scroll-behavior: smooth;
+        }
+
+        .welcome {
+            margin: auto 0;
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        .welcome-logo {
+            width: 66px;
+            height: 66px;
+            border-radius: 22px;
+            margin: 0 auto 23px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, #b6a8ff, #7964e8);
+            color: #151222;
+            font-size: 38px;
+            font-weight: 800;
+        }
+
+        .welcome h1 {
+            margin: 0 0 12px;
+            font-size: clamp(28px, 5vw, 39px);
+            letter-spacing: -1.5px;
+        }
+
+        .welcome p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .suggestions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .suggestion {
+            min-height: 76px;
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            background: var(--panel);
+            color: var(--text);
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .suggestion:hover {
+            border-color: var(--accent);
+        }
+
+        .suggestion span {
+            display: block;
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 6px;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            max-width: 100%;
+            animation: appear 180ms ease-out;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            max-width: 85%;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            width: 100%;
+        }
+
+        .message-role {
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 650;
+        }
+
+        .message-body {
+            font-size: 14px;
+            line-height: 1.8;
+            overflow-wrap: anywhere;
+            white-space: pre-wrap;
+        }
+
+        .user .message-body {
+            padding: 12px 16px;
+            background: var(--user-message);
+            border: 1px solid #39344e;
+            border-radius: 17px 17px 4px 17px;
+        }
+
+        .assistant .message-body {
+            padding: 2px 0;
+        }
+
+        .composer-area {
+            padding: 12px 24px max(20px, env(safe-area-inset-bottom));
+            background: linear-gradient(transparent, var(--background) 15%);
+        }
+
+        .composer {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 9px 10px 9px 16px;
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            border: 1px solid #353641;
+            border-radius: 19px;
+            background: var(--panel);
+            box-shadow: 0 8px 35px #00000018;
+        }
+
+        .composer:focus-within {
+            border-color: #7465c5;
+        }
+
+        #messageInput {
+            flex: 1;
+            min-width: 0;
+            max-height: 160px;
+            resize: none;
+            padding: 8px 0;
+            border: 0;
+            outline: none;
+            background: transparent;
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        #messageInput::placeholder {
+            color: #777985;
+        }
+
+        #sendButton {
+            width: 39px;
+            height: 39px;
+            flex-shrink: 0;
+            border: 0;
+            border-radius: 12px;
+            background: var(--accent);
+            color: #171326;
+            font-size: 19px;
+            font-weight: 800;
+        }
+
+        #sendButton:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .disclaimer {
+            text-align: center;
+            margin-top: 10px;
+            color: #747580;
+            font-size: 10px;
+        }
+
+        .menu-button {
+            display: none;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            padding: 7px 10px;
+            background: var(--panel);
+            color: var(--text);
+        }
+
+        @keyframes appear {
+            from {
+                opacity: 0;
+                transform: translateY(4px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 650px) {
+            .sidebar {
+                position: fixed;
+                z-index: 5;
+                inset: 0 auto 0 0;
+                width: min(280px, 85vw);
+                transform: translateX(-100%);
+                transition: transform 180ms ease;
+                box-shadow: 12px 0 35px #00000055;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .menu-button {
+                display: inline-block;
+            }
+
+            .topbar {
+                min-height: 59px;
+                padding: 0 14px;
+                gap: 12px;
+            }
+
+            .chat {
+                padding: 20px 16px;
+            }
+
+            .composer-area {
+                padding: 10px 12px max(14px, env(safe-area-inset-bottom));
+            }
+
+            .suggestions {
+                grid-template-columns: 1fr;
+            }
+
+            .welcome h1 {
+                font-size: 30px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <div class="logo">Z</div>
+                <div>
+                    <div class="brand-name">Zentra AI</div>
+                    <div class="brand-label">Built from the ground up</div>
+                </div>
+            </div>
+
+            <button class="new-chat" id="newChatButton">
+                + &nbsp; New conversation
+            </button>
+
+            <div class="sidebar-label">RECENT CONVERSATIONS</div>
+            <div class="history" id="history"></div>
+
+            <div class="sidebar-footer">
+                Zentra AI · Early development
+            </div>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <button class="menu-button" id="menuButton"
+                    aria-label="Open navigation">☰</button>
+
+                <div class="model-name">Zentra Core</div>
+
+                <div class="status">
+                    <span class="status-dot"></span>
+                    <span id="statusText">Local engine</span>
+                </div>
+            </header>
+
+            <section class="chat" id="chat" aria-live="polite">
+                <div class="welcome" id="welcome">
+                    <div class="welcome-logo">Z</div>
+                    <h1>Meet Zentra.</h1>
+                    <p>
+                        An AI we're building from the ground up.<br>
+                        Start a conversation or choose an idea below.
+                    </p>
+
+                    <div class="suggestions">
+                        <button class="suggestion"
+                            data-prompt="Who are you?">
+                            Introduce yourself
+                            <span>Get to know Zentra</span>
+                        </button>
+
+                        <button class="suggestion"
+                            data-prompt="What can you do?">
+                            Your capabilities
+                            <span>Explore what you can do</span>
+                        </button>
+
+                        <button class="suggestion"
+                            data-prompt="How does an AI learn?">
+                            How AI learns
+                            <span>Explore machine learning</span>
+                        </button>
+
+                        <button class="suggestion"
+                            data-prompt="Let's learn something new.">
+                            Teach Zentra
+                            <span>Start exploring an idea</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="composer-area">
+                <form class="composer" id="chatForm">
+                    <textarea
+                        id="messageInput"
+                        rows="1"
+                        maxlength="12000"
+                        placeholder="Message Zentra..."
+                        aria-label="Your message"
+                        required></textarea>
+
+                    <button id="sendButton" type="submit"
+                        aria-label="Send message">↑</button>
+                </form>
+
+                <div class="disclaimer">
+                    Zentra is an early-stage AI. Its abilities will improve
+                    as we develop its engine.
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        const chat = document.getElementById("chat");
+        const form = document.getElementById("chatForm");
+        const input = document.getElementById("messageInput");
+        const sendButton = document.getElementById("sendButton");
+        const welcome = document.getElementById("welcome");
+        const historyElement = document.getElementById("history");
+        const sidebar = document.getElementById("sidebar");
+        const statusText = document.getElementById("statusText");
+
+        let busy = false;
+        let conversations = [];
+        let activeConversation = createConversation();
+
+        function createConversation() {
+            return {
+                id: crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : String(Date.now()) + Math.random(),
+                title: "New conversation",
+                messages: []
+            };
+        }
+
+        function hideWelcome() {
+            if (welcome) welcome.style.display = "none";
+        }
+
+        function scrollToBottom() {
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function addMessage(role, text) {
+            hideWelcome();
+
+            const wrapper = document.createElement("article");
+            wrapper.className = "message " + role;
+
+            const label = document.createElement("div");
+            label.className = "message-role";
+            label.textContent = role === "user" ? "YOU" : "ZENTRA";
+
+            const body = document.createElement("div");
+            body.className = "message-body";
+            body.textContent = text;
+
+            wrapper.append(label, body);
+            chat.appendChild(wrapper);
+            scrollToBottom();
+
+            return body;
+        }
+
+        function saveConversation() {
+            if (!activeConversation.messages.length) return;
+
+            try {
+                conversations = conversations.filter(
+                    item => item.id !== activeConversation.id
+                );
+
+                conversations.unshift(activeConversation);
+                conversations = conversations.slice(0, 30);
+
+                localStorage.setItem(
+                    "zentra_conversations",
+                    JSON.stringify(conversations)
+                );
+
+                renderHistory();
+            } catch (error) {
+                console.warn("Could not save conversations.", error);
+            }
+        }
+
+        function loadConversations() {
+            try {
+                const saved = JSON.parse(
+                    localStorage.getItem("zentra_conversations") || "[]"
+                );
+
+                if (Array.isArray(saved)) {
+                    conversations = saved.filter(
+                        item => item &&
+                            typeof item.id === "string" &&
+                            Array.isArray(item.messages)
+                    );
+                }
+            } catch {
+                conversations = [];
+            }
+
+            renderHistory();
+        }
+
+        function renderHistory() {
+            historyElement.replaceChildren();
+
+            for (const conversation of conversations) {
+                const item = document.createElement("div");
+                item.className = "history-item";
+                item.textContent = conversation.title;
+                item.title = conversation.title;
+
+                item.addEventListener("click", () => {
+                    activeConversation = conversation;
+                    renderConversation();
+                    sidebar.classList.remove("open");
+                });
+
+                historyElement.appendChild(item);
+            }
+        }
+
+        function renderConversation() {
+            chat.replaceChildren();
+
+            for (const message of activeConversation.messages) {
+                addMessage(message.role, message.text);
+            }
+
+            if (!activeConversation.messages.length) {
+                chat.appendChild(welcome);
+                welcome.style.display = "";
+            }
+        }
+
+        function startNewConversation() {
+            if (activeConversation.messages.length) {
+                saveConversation();
+            }
+
+            activeConversation = createConversation();
+            renderConversation();
+            input.focus();
+            sidebar.classList.remove("open");
+        }
+
+        async function askAI(message) {
+            /*
+             * The Android build will connect this function to ai.py.
+             * The web-only fallback is deliberately limited.
+             */
+            if (
+                window.ZentraBridge &&
+                typeof window.ZentraBridge.ask === "function"
+            ) {
+                const result = await window.ZentraBridge.ask(message);
+                return String(result);
+            }
+
+            return "The Python AI engine isn't connected yet. " +
+                "Once the Android bridge is configured, Zentra Core " +
+                "will process your message using ai.py.";
+        }
+
+        async function sendMessage(message) {
+            if (busy || !message.trim()) return;
+
+            busy = true;
+            sendButton.disabled = true;
+            statusText.textContent = "Thinking...";
+
+            const userMessage = message.trim();
+
+            activeConversation.messages.push({
+                role: "user",
+                text: userMessage
+            });
+
+            if (activeConversation.messages.length === 1) {
+                activeConversation.title =
+                    userMessage.slice(0, 42) +
+                    (userMessage.length > 42 ? "…" : "");
+            }
+
+            addMessage("user", userMessage);
+
+            const responseBody = addMessage("assistant", "Thinking…");
+
+            input.value = "";
+            input.style.height = "auto";
+
+            try {
+                const response = await askAI(userMessage);
+
+                responseBody.textContent = response;
+
+                activeConversation.messages.push({
+                    role: "assistant",
+                    text: response
+                });
+
+                saveConversation();
+            } catch (error) {
+                responseBody.textContent =
+                    "Zentra couldn't process that message. " +
+                    "Check the AI engine connection and try again.";
+
+                console.error(error);
+            } finally {
+                busy = false;
+                sendButton.disabled = false;
+                statusText.textContent = "Local engine";
+                input.focus();
+                scrollToBottom();
+            }
+        }
+
+        form.addEventListener("submit", event => {
+            event.preventDefault();
+            sendMessage(input.value);
+        });
+
+        input.addEventListener("input", () => {
+            input.style.height = "auto";
+            input.style.height =
+                Math.min(input.scrollHeight, 160) + "px";
+        });
+
+        input.addEventListener("keydown", event => {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                form.requestSubmit();
+            }
+        });
+
+        document.querySelectorAll("[data-prompt]").forEach(button => {
+            button.addEventListener("click", () => {
+                input.value = button.dataset.prompt;
+                form.requestSubmit();
+            });
+        });
+
+        document.getElementById("newChatButton")
+            .addEventListener("click", startNewConversation);
+
+        document.getElementById("menuButton")
+            .addEventListener("click", () => {
+                sidebar.classList.toggle("open");
+            });
+
+        loadConversations();
+    </script>
+</body>
+  </html>
