@@ -1,83 +1,65 @@
 name: Build Zentra AI APK
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
       - master
 
-  workflow_dispatch:
-
 permissions:
   contents: read
-
-concurrency:
-  group: zentra-apk-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
-    timeout-minutes: 40
 
     steps:
-      # 1. Download the repository.
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Install Java for Android and Gradle.
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      # 3. Install Python for the Chaquopy build.
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 4. Install the Android SDK.
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK components
-        run: |
-          sdkmanager "platform-tools"
-          sdkmanager "platforms;android-35"
-          sdkmanager "build-tools;35.0.0"
-
-      # 5. Install the compatible Gradle distribution.
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.9"
+          packages: |
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
 
-      # 6. Check the source files.
       - name: Validate source files
+        shell: bash
         run: |
-          test -f index.html || {
-            echo "ERROR: index.html is missing"
-            exit 1
-          }
+          set -euo pipefail
 
-          test -f ai.py || {
-            echo "ERROR: ai.py is missing"
-            exit 1
-          }
+          test -f index.html
+          test -f ai.py
 
-          echo "Zentra source files found."
+          python -m py_compile ai.py
 
-      # 7. Generate the Android project.
       - name: Generate Android project
         shell: bash
         run: |
+          set -euo pipefail
+
           mkdir -p \
             app/src/main/assets \
             app/src/main/python \
             app/src/main/java/com/zentra/ai
+
+          cp index.html app/src/main/assets/index.html
+          cp ai.py app/src/main/python/ai.py
 
           cat > settings.gradle <<'EOF'
           pluginManagement {
@@ -92,7 +74,6 @@ jobs:
               repositoriesMode.set(
                   RepositoriesMode.FAIL_ON_PROJECT_REPOS
               )
-
               repositories {
                   google()
                   mavenCentral()
@@ -111,10 +92,9 @@ jobs:
           EOF
 
           cat > gradle.properties <<'EOF'
-          android.useAndroidX=true
-          org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g
+          org.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8
           org.gradle.parallel=true
-          org.gradle.caching=true
+          android.useAndroidX=true
           EOF
 
           cat > app/build.gradle <<'EOF'
@@ -132,27 +112,19 @@ jobs:
                   minSdk 24
                   targetSdk 35
                   versionCode 1
-                  versionName '1.0'
+                  versionName '0.1.0'
 
                   ndk {
                       abiFilters 'arm64-v8a', 'armeabi-v7a'
                   }
-              }
 
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
-          }
-
-          chaquopy {
-              defaultConfig {
-                  version = "3.11"
+                  python {
+                      version '3.11'
+                  }
               }
           }
           EOF
 
-          # Generate the Android manifest.
           cat > app/src/main/AndroidManifest.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -160,13 +132,13 @@ jobs:
               <application
                   android:allowBackup="false"
                   android:label="Zentra AI"
-                  android:supportsRtl="true"
-                  android:theme="@android:style/Theme.Material.NoActionBar">
+                  android:theme="@android:style/Theme.Material.NoActionBar"
+                  android:usesCleartextTraffic="false">
 
                   <activity
                       android:name=".MainActivity"
-                      android:exported="true"
-                      android:screenOrientation="unspecified">
+                      android:configChanges="orientation|screenSize|keyboardHidden"
+                      android:exported="true">
 
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -178,16 +150,6 @@ jobs:
           </manifest>
           EOF
 
-          # Copy your existing HTML and Python files.
-          cp index.html app/src/main/assets/index.html
-          cp ai.py app/src/main/python/ai.py
-
-          echo "Android project generated."
-
-      # 8. Generate the Java-to-Python bridge.
-      - name: Generate Python bridge
-        shell: bash
-        run: |
           cat > app/src/main/java/com/zentra/ai/MainActivity.java <<'EOF'
           package com.zentra.ai;
 
@@ -197,44 +159,32 @@ jobs:
           import android.webkit.WebChromeClient;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
+          import android.widget.Toast;
 
-          import com.chaquo.python.AndroidPlatform;
           import com.chaquo.python.PyObject;
           import com.chaquo.python.Python;
+          import com.chaquo.python.android.AndroidPlatform;
 
           public class MainActivity extends Activity {
-
               private WebView webView;
-              private PyObject zentra;
+              private PyObject zentraAI;
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
 
-                  try {
-                      if (!Python.isStarted()) {
-                          Python.start(
-                              new AndroidPlatform(getApplicationContext())
-                          );
-                      }
-
-                      Python python = Python.getInstance();
-
-                      zentra = python
-                          .getModule("ai")
-                          .callAttr("ZentraAI");
-
-                  } catch (Exception e) {
-                      throw new RuntimeException(
-                          "Could not initialize Zentra's Python engine", e
-                      );
+                  if (!Python.isStarted()) {
+                      Python.start(new AndroidPlatform(this));
                   }
+
+                  Python python = Python.getInstance();
+                  PyObject module = python.getModule("ai");
+                  zentraAI = module.callAttr("ZentraAI");
 
                   webView = new WebView(this);
 
                   webView.getSettings().setJavaScriptEnabled(true);
                   webView.getSettings().setDomStorageEnabled(true);
-
                   webView.setWebViewClient(new WebViewClient());
                   webView.setWebChromeClient(new WebChromeClient());
 
@@ -244,28 +194,23 @@ jobs:
                   );
 
                   setContentView(webView);
-
                   webView.loadUrl(
                       "file:///android_asset/index.html"
                   );
               }
 
-              public class ZentraBridge {
-
+              private class ZentraBridge {
                   @JavascriptInterface
                   public String ask(String message) {
                       try {
-                          if (zentra == null) {
-                              return "Zentra's Python engine is unavailable.";
-                          }
+                          PyObject result = zentraAI.callAttr(
+                              "generate",
+                              message
+                          );
 
-                          return zentra
-                              .callAttr("generate", message)
-                              .toString();
-
-                      } catch (Exception e) {
-                          return "Zentra encountered an engine error: "
-                              + e.getMessage();
+                          return result.toString();
+                      } catch (Exception exception) {
+                          return "The Python engine encountered an error.";
                       }
                   }
               }
@@ -281,28 +226,16 @@ jobs:
           }
           EOF
 
-          echo "Python bridge generated."
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      # 9. Verify the generated project.
-      - name: Verify generated files
-        run: |
-          test -f app/src/main/assets/index.html
-          test -f app/src/main/python/ai.py
-          test -f app/src/main/java/com/zentra/ai/MainActivity.java
-          test -f app/src/main/AndroidManifest.xml
-
-          echo "Generated project verification passed."
-
-      # 10. Build the APK.
       - name: Build debug APK
-        run: |
-          gradle --no-daemon --stacktrace :app:assembleDebug
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
 
-      # 11. Upload the APK for download.
-      - name: Upload Zentra APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: zentra-ai-apk
+          name: zentra-ai-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
